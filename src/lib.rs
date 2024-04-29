@@ -56,9 +56,12 @@ pub fn init(path: &str) -> Result<bool, std::io::Error> {
         std::fs::canonicalize(path)?
     };
 
+    let pid = std::process::id();
+
     *state = Some(GlobalState {
         trace_path,
         buffer_size: 64*1024,
+        pid,
         silent: false,
     });
 
@@ -158,6 +161,7 @@ static GLOBAL_STATE: RwLock<Option<GlobalState>> = RwLock::new(None);
 struct GlobalState {
     trace_path: std::path::PathBuf,
     buffer_size: usize,
+    pid: u32,
     silent: bool,
 }
 
@@ -223,10 +227,14 @@ impl ThreadState {
             ptr
         };
 
+        let tid = unsafe {
+            let tid = std::thread::current().id();
+            std::mem::transmute::<_, u64>(tid) as u32
+        };
+
         Some(Self {
-            // @todo
-            pid: 42,
-            tid: 69,
+            pid: global.pid,
+            tid,
             file,
             buffer,
             buffer_size,
